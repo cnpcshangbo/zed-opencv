@@ -48,11 +48,11 @@ int main(int argc, char **argv) {
     // Set configuration parameters
     InitParameters init_params;
     //init_params.input.setFromSVOFile("/home/nvidia/Documents/ZED/HD720_SN2353053_14-02-19.svo");
-    init_params.input.setFromSVOFile("/home/nvidia/Documents/ZED/HD720_SN2353053_14-05-18.svo");
+    //init_params.input.setFromSVOFile("/home/nvidia/Documents/ZED/HD720_SN2353053_14-05-18.svo");
     //init_params.camera_resolution = RESOLUTION::HD1080;
     init_params.depth_mode = DEPTH_MODE::ULTRA;
     init_params.coordinate_units = UNIT::METER;
-    if (argc > 1) init_params.input.setFromSVOFile(argv[1]);
+    //if (argc > 1) init_params.input.setFromSVOFile(argv[1]);
     init_params.coordinate_units = UNIT::MILLIMETER; // Use millimeter units (for depth measurements)
 
     // Open the camera
