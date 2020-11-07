@@ -28,6 +28,9 @@
 
 // OpenCV includes
 #include <opencv2/opencv.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+//using namespace cv;
 
 // Sample includes
 #include <SaveDepth.hpp>
@@ -44,11 +47,14 @@ int main(int argc, char **argv) {
 
     // Set configuration parameters
     InitParameters init_params;
-    init_params.camera_resolution = RESOLUTION::HD1080;
+    //init_params.input.setFromSVOFile("/home/nvidia/Documents/ZED/HD720_SN2353053_14-02-19.svo");
+    //init_params.input.setFromSVOFile("/home/nvidia/Documents/ZED/HD720_SN2353053_14-05-18.svo");
+    //init_params.camera_resolution = RESOLUTION::HD1080;
     init_params.depth_mode = DEPTH_MODE::ULTRA;
     init_params.coordinate_units = UNIT::METER;
-    if (argc > 1) init_params.input.setFromSVOFile(argv[1]);
-        
+    //if (argc > 1) init_params.input.setFromSVOFile(argv[1]);
+    init_params.coordinate_units = UNIT::MILLIMETER; // Use millimeter units (for depth measurements)
+
     // Open the camera
     ERROR_CODE err = zed.open(init_params);
     if (err != ERROR_CODE::SUCCESS) {
@@ -77,7 +83,7 @@ int main(int argc, char **argv) {
     cv::Mat image_ocv = slMat2cvMat(image_zed);
     Mat depth_image_zed(new_width, new_height, MAT_TYPE::U8_C4);
     cv::Mat depth_image_ocv = slMat2cvMat(depth_image_zed);
-    Mat point_cloud;
+    Mat depth, point_cloud;
 
     // Loop until 'q' is pressed
     char key = ' ';
@@ -88,11 +94,36 @@ int main(int argc, char **argv) {
             // Retrieve the left image, depth image in half-resolution
             zed.retrieveImage(image_zed, VIEW::LEFT, MEM::CPU, new_image_size);
             zed.retrieveImage(depth_image_zed, VIEW::DEPTH, MEM::CPU, new_image_size);
-
+            zed.retrieveMeasure(depth, MEASURE::DEPTH, MEM::CPU, new_image_size);
             // Retrieve the RGBA point cloud in half-resolution
             // To learn how to manipulate and display point clouds, see Depth Sensing sample
             zed.retrieveMeasure(point_cloud, MEASURE::XYZRGBA, MEM::CPU, new_image_size);
 
+            //Detecting wood from depth_image_zed
+            int n_min = 0;
+            int n = 0;
+            float depth_value;
+            float depth_value_min = 2500;
+            //depth.getValue(0,depth_image_zed.getHeight() / 2, &depth_value_min);
+            printf("image_zed.Width = %d, height = %d.", image_zed.getWidth(), image_zed.getHeight());
+            printf("depth_image_zed.Width = %d, height = %d.", depth_image_zed.getWidth(), depth_image_zed.getHeight());
+            printf("depth.Width = %d, height = %d.", depth.getWidth(), depth.getHeight());
+            while (n < depth_image_zed.getWidth()){
+                        //int x = image.getWidth() / 2;
+                        int x = n;
+                        int y = depth_image_zed.getHeight() / 2;
+
+                        depth.getValue(x,y, &depth_value);
+                        //printf("Depth to Camera at (%d, %d): %f mm\n", x, y, depth_value);
+                        //printf("");
+                        if ((isnan(depth_value)==0) && (depth_value < depth_value_min) && (depth_value > 0)) {
+                          n_min = n; depth_value_min = depth_value;
+                        }
+            n++;
+            }
+            printf("Min value is at %d. Value is %f mm. \n", n_min, depth_value_min);
+
+            cv::circle( depth_image_ocv, cv::Point( n_min, depth_image_zed.getHeight() / 2 ), 32.0, cv::Scalar( 0, 0, 255 ), 1, 8 );
             // Display image and depth using cv:Mat which share sl:Mat data
             cv::imshow("Image", image_ocv);
             cv::imshow("Depth", depth_image_ocv);
