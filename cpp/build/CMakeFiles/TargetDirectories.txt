@@ -1,3 +1,0 @@
-/home/nvidia/zed-opencv/cpp/build/CMakeFiles/rebuild_cache.dir
-/home/nvidia/zed-opencv/cpp/build/CMakeFiles/ZED_with_OpenCV.dir
-/home/nvidia/zed-opencv/cpp/build/CMakeFiles/edit_cache.dir
