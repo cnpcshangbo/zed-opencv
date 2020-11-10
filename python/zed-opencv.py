@@ -164,8 +164,23 @@ def main() :
             # It returns a numpy array that can be used as a matrix with opencv
             image_ocv = image_zed.get_data()
             depth_image_ocv = depth_image_zed.get_data()
-            n_min = 100
-            cv2.circle( depth_image_ocv, ( n_min, 100 ), 32, ( 0, 0, 255 ), 1, 8 );
+            depth_ocv = depth.get_data()
+            
+            # Detecting wood from depth_image_zed
+            n_min = 0
+            n=0
+            depth_value_min = 2500
+            while n < image_size.width :
+                x = n;
+                y = image_size.height // 2
+                depth_value = depth_ocv[y,x]
+                if (math.isnan(depth_value)==0) and (depth_value < depth_value_min) and (depth_value > 0):
+                    n_min = n
+                    depth_value_min = depth_value
+                n = n+1
+            print('Min value is at: ' + str(n_min) + '. Value is: ' + str(depth_value_min) + '.')
+            # n_min = 100
+            cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), 32, ( 0, 0, 255 ), 1, 8 )
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
 
