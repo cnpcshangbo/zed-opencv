@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import pyzed.sl as sl
 import cv2
+import math
 
 help_string = "[s] Save side by side image [d] Save Depth, [n] Change Depth format, [p] Save Point Cloud, [m] Change Point Cloud format, [q] Quit"
 prefix_point_cloud = "Cloud_"
@@ -14,7 +15,7 @@ mode_depth = 0
 point_cloud_format_ext = ".ply"
 depth_format_ext = ".png"
 
-def point_cloud_format_name(): 
+def point_cloud_format_name():
     global mode_point_cloud
     if mode_point_cloud > 3:
         mode_point_cloud = 0
@@ -24,9 +25,9 @@ def point_cloud_format_name():
         2: ".ply",
         3: ".vtk",
     }
-    return switcher.get(mode_point_cloud, "nothing") 
-  
-def depth_format_name(): 
+    return switcher.get(mode_point_cloud, "nothing")
+
+def depth_format_name():
     global mode_depth
     if mode_depth > 2:
         mode_depth = 0
@@ -35,7 +36,7 @@ def depth_format_name():
         1: ".pfm",
         2: ".pgm",
     }
-    return switcher.get(mode_depth, "nothing") 
+    return switcher.get(mode_depth, "nothing")
 
 def save_point_cloud(zed, filename) :
     print("Saving Point Cloud...")
@@ -70,7 +71,7 @@ def save_sbs_image(zed, filename) :
     sbs_image = np.concatenate((image_cv_left, image_cv_right), axis=1)
 
     cv2.imwrite(filename, sbs_image)
-    
+
 
 def process_key_event(zed, key) :
     global mode_depth
@@ -145,6 +146,7 @@ def main() :
     # Declare your sl.Mat matrices
     image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
     depth_image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
+    depth = sl.Mat()
     point_cloud = sl.Mat()
 
     key = ' '
@@ -154,6 +156,7 @@ def main() :
             # Retrieve the left image, depth image in the half-resolution
             zed.retrieve_image(image_zed, sl.VIEW.LEFT, sl.MEM.CPU, image_size)
             zed.retrieve_image(depth_image_zed, sl.VIEW.DEPTH, sl.MEM.CPU, image_size)
+            zed.retrieve_measure(depth, sl.MEASURE.DEPTH, sl.MEM.CPU, image_size)
             # Retrieve the RGBA point cloud in half resolution
             zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
 
@@ -161,7 +164,8 @@ def main() :
             # It returns a numpy array that can be used as a matrix with opencv
             image_ocv = image_zed.get_data()
             depth_image_ocv = depth_image_zed.get_data()
-
+            n_min = 100
+            cv2.circle( depth_image_ocv, ( n_min, 100 ), 32, ( 0, 0, 255 ), 1, 8 );
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
 
