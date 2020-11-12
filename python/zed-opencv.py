@@ -167,6 +167,10 @@ def main() :
             depth_ocv = depth.get_data()
             
             # Detecting wood from depth_image_zed
+            # Minimum_value def (y)
+            # Get minimum depth value and circle it
+            # Input: y colum number
+            # Return: Minimum depth value
             n_min = 0
             n=0
             depth_value_min = 2500
@@ -177,10 +181,33 @@ def main() :
                 if (math.isnan(depth_value)==0) and (depth_value < depth_value_min) and (depth_value > 0):
                     n_min = n
                     depth_value_min = depth_value
-                n = n+1
+                n = n + 1
             print('Min value is at: ' + str(n_min) + '. Value is: ' + str(depth_value_min) + '.')
             # n_min = 100
-            cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), 32, ( 0, 0, 255 ), 1, 8 )
+            cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), \
+                    32, ( 0, 0, 255 ), 1, 8 )
+            
+            # Get points within a threshold and circle them
+            # def (minimum_value)
+            threshold = depth_value_min + 40
+            n = 0
+            point_depth = np.array([])
+            point_x = np.array([])
+            while n < image_size.width :
+                x = n
+                y = image_size.height // 2
+                depth_value =depth_ocv[y,x]
+                if math.isnan(depth_value)==0 and depth_value < threshold :
+                    point_depth = np.append(point_depth, depth_value)
+                    point_x = np.append(point_x, x)
+                    cv2.circle( depth_image_ocv, ( x, image_size.height // 2), \
+                        16, ( 0, 0, 255 ), 1, 8 )
+                n = n + 1
+            print(str(len(point_x)) + 'points are within threshold 40.\n')
+            print('Point within threshold:\n' + str(point_depth))
+            
+
+
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
 
