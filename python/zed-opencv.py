@@ -184,8 +184,8 @@ def main() :
                 n = n + 1
             print('Min value is at: ' + str(n_min) + '. Value is: ' + str(depth_value_min) + '.')
             # n_min = 100
-            cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), \
-                    32, ( 0, 0, 255 ), 1, 8 )
+            # cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), \
+            #        32, ( 0, 0, 255 ), 1, 8 )
             
             # Get points within a threshold and circle them
             # def (minimum_value)
@@ -200,13 +200,15 @@ def main() :
                 if math.isnan(depth_value)==0 and depth_value < threshold :
                     point_depth = np.append(point_depth, depth_value)
                     point_x = np.append(point_x, x)
-                    cv2.circle( depth_image_ocv, ( x, image_size.height // 2), \
-                        16, ( 0, 0, 255 ), 1, 8 )
+                    # cv2.circle( depth_image_ocv, ( x, image_size.height // 2), \
+                    #    16, ( 0, 0, 255 ), 1, 8 )
                 n = n + 1
             print(str(len(point_x)) + 'points are within threshold 40.\n')
-            print('Point within threshold:\n' + str(point_depth))
-            
-
+            # print('Point within threshold:\n' + str(point_depth))
+            girder_center = np.mean(point_x)
+            print('Girder ceter at: ' + str(girder_center)) 
+            cv2.circle( depth_image_ocv, (int(girder_center), image_size.height // \
+                    2), 8, (255, 0, 0), 2, 8 )
 
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
