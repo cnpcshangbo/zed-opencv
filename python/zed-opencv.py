@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import pyzed.sl as sl
 import cv2
+import math
 
 help_string = "[s] Save side by side image [d] Save Depth, [n] Change Depth format, [p] Save Point Cloud, [m] Change Point Cloud format, [q] Quit"
 prefix_point_cloud = "Cloud_"
@@ -14,7 +15,7 @@ mode_depth = 0
 point_cloud_format_ext = ".ply"
 depth_format_ext = ".png"
 
-def point_cloud_format_name(): 
+def point_cloud_format_name():
     global mode_point_cloud
     if mode_point_cloud > 3:
         mode_point_cloud = 0
@@ -24,9 +25,9 @@ def point_cloud_format_name():
         2: ".ply",
         3: ".vtk",
     }
-    return switcher.get(mode_point_cloud, "nothing") 
-  
-def depth_format_name(): 
+    return switcher.get(mode_point_cloud, "nothing")
+
+def depth_format_name():
     global mode_depth
     if mode_depth > 2:
         mode_depth = 0
@@ -35,7 +36,7 @@ def depth_format_name():
         1: ".pfm",
         2: ".pgm",
     }
-    return switcher.get(mode_depth, "nothing") 
+    return switcher.get(mode_depth, "nothing")
 
 def save_point_cloud(zed, filename) :
     print("Saving Point Cloud...")
@@ -70,7 +71,7 @@ def save_sbs_image(zed, filename) :
     sbs_image = np.concatenate((image_cv_left, image_cv_right), axis=1)
 
     cv2.imwrite(filename, sbs_image)
-    
+
 
 def process_key_event(zed, key) :
     global mode_depth
@@ -145,6 +146,7 @@ def main() :
     # Declare your sl.Mat matrices
     image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
     depth_image_zed = sl.Mat(image_size.width, image_size.height, sl.MAT_TYPE.U8_C4)
+    depth = sl.Mat()
     point_cloud = sl.Mat()
 
     key = ' '
@@ -154,6 +156,7 @@ def main() :
             # Retrieve the left image, depth image in the half-resolution
             zed.retrieve_image(image_zed, sl.VIEW.LEFT, sl.MEM.CPU, image_size)
             zed.retrieve_image(depth_image_zed, sl.VIEW.DEPTH, sl.MEM.CPU, image_size)
+            zed.retrieve_measure(depth, sl.MEASURE.DEPTH, sl.MEM.CPU, image_size)
             # Retrieve the RGBA point cloud in half resolution
             zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA, sl.MEM.CPU, image_size)
 
@@ -161,6 +164,55 @@ def main() :
             # It returns a numpy array that can be used as a matrix with opencv
             image_ocv = image_zed.get_data()
             depth_image_ocv = depth_image_zed.get_data()
+            depth_ocv = depth.get_data()
+            
+            # Detecting wood from depth_image_zed
+            # Minimum_value def (y)
+            # Get minimum depth value and circle it
+            # Input: y colum number
+            # Return: Minimum depth value
+            n_min = 0
+            n=0
+            depth_value_min = 2500
+            while n < image_size.width :
+                x = n;
+                y = image_size.height // 2
+                depth_value = depth_ocv[y,x]
+                if (math.isnan(depth_value)==0) and (depth_value < depth_value_min) and (depth_value > 0):
+                    n_min = n
+                    depth_value_min = depth_value
+                n = n + 1
+            print('Min value is at: ' + str(n_min) + '. Value is: ' + str(depth_value_min) + '.')
+            # n_min = 100
+            # cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), \
+            #        32, ( 0, 0, 255 ), 1, 8 )
+            
+            # Get points within a threshold and circle them
+            # def (minimum_value)
+            threshold = depth_value_min + 40
+            n = 0
+            point_depth = np.array([])
+            point_x = np.array([])
+            while n < image_size.width :
+                x = n
+                y = image_size.height // 2
+                depth_value =depth_ocv[y,x]
+                if math.isnan(depth_value)==0 and depth_value < threshold :
+                    point_depth = np.append(point_depth, depth_value)
+                    point_x = np.append(point_x, x)
+                    # cv2.circle( depth_image_ocv, ( x, image_size.height // 2), \
+                    #    16, ( 0, 0, 255 ), 1, 8 )
+                n = n + 1
+            print(str(len(point_x)) + 'points are within threshold 40.\n')
+            # print('Point within threshold:\n' + str(point_depth))
+            girder_center = np.mean(point_x)
+            print('Girder ceter at: ' + str(girder_center)) 
+            cv2.circle( depth_image_ocv, (int(girder_center), image_size.height // \
+                    2), 8, (255, 0, 0), 2, 8 )
+            # Draw view center
+            cv2.circle(depth_image_ocv, (image_size.width //2, image_size.height //2), \
+                    8, (0,255,0),2,8)
+
 
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
