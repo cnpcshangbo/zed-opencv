@@ -209,6 +209,10 @@ def main() :
             print('Girder ceter at: ' + str(girder_center)) 
             cv2.circle( depth_image_ocv, (int(girder_center), image_size.height // \
                     2), 8, (255, 0, 0), 2, 8 )
+            # Draw view center
+            cv2.circle(depth_image_ocv, (image_size.width //2, image_size.height //2), \
+                    8, (0,255,0),2,8)
+
 
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
