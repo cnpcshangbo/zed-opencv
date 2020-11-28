@@ -3,6 +3,7 @@ import numpy as np
 import pyzed.sl as sl
 import cv2
 import math
+import socket
 
 help_string = "[s] Save side by side image [d] Save Depth, [n] Change Depth format, [p] Save Point Cloud, [m] Change Point Cloud format, [q] Quit"
 prefix_point_cloud = "Cloud_"
@@ -131,6 +132,17 @@ def main() :
         zed.close()
         exit(1)
 
+    # Create a TCP/IP socket
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    # Bind the socket to the port
+    server_address = ('localhost', 10000)
+    print('starting up on {} port {}'.format(*server_address))
+    sock.bind(server_address)
+
+    # Listen for incoming connections
+    sock.listen(1)
+
     # Display help in console
     print_help()
 
@@ -150,7 +162,17 @@ def main() :
     point_cloud = sl.Mat()
 
     key = ' '
+    # Wait for a connection
+    print('waiting for a connection')
+    connection, client_address = sock.accept()
+    print('connection from ', client_address)
+
     while key != 113 :
+        # Wait for request
+        print('Waiting for request...')
+        data = connection.recv(16)
+        print('received {!r}'.format(data))
+
         err = zed.grab(runtime)
         if err == sl.ERROR_CODE.SUCCESS :
             # Retrieve the left image, depth image in the half-resolution
@@ -205,8 +227,13 @@ def main() :
                 n = n + 1
             print(str(len(point_x)) + 'points are within threshold 40.\n')
             # print('Point within threshold:\n' + str(point_depth))
-            girder_center = np.mean(point_x)
+            girder_center = int(np.mean(point_x))
             print('Girder ceter at: ' + str(girder_center)) 
+            
+            # Sending TCP msg
+            connection.sendall(girder_center.to_bytes(2,'big'))
+    
+            # Draw girder center
             cv2.circle( depth_image_ocv, (int(girder_center), image_size.height // \
                     2), 8, (255, 0, 0), 2, 8 )
             # Draw view center
@@ -223,6 +250,8 @@ def main() :
 
     cv2.destroyAllWindows()
     zed.close()
+    # Clean up the connection
+    connection.close()
 
     print("\nFINISH")
 
