@@ -4,6 +4,61 @@ import pyzed.sl as sl
 import cv2
 import math
 import socket
+from flask import Response
+from flask import Flask
+from flask import render_template
+import threading
+import argparse
+import datetime
+import imutils
+import time
+# initialize the output frame and a lock used to ensure thread-safe
+# exchanges of the output frames (useful for multiple browsers/tabs
+# are viewing tthe stream)
+outputFrame = None
+lock = threading.Lock()
+
+# initialize a flask object
+app = Flask(__name__)
+
+@app.route("/")
+def index():
+	# return the rendered template
+	return render_template("index.html")
+
+def generate():
+	# grab global references to the output frame and lock variables
+	global outputFrame, lock
+
+	# loop over frames from the output stream
+	while True:
+		# wait until the lock is acquired
+		with lock:
+			# check if the output frame is available, otherwise skip
+			# the iteration of the loop
+			if outputFrame is None:
+				print (outputFrame is None)
+				continue
+
+			# encode the frame in JPEG format
+			(flag, encodedImage) = cv2.imencode(".jpg", outputFrame)
+
+			# ensure the frame was successfully encoded
+			if not flag:
+				continue
+
+		# yield the output frame in the byte format
+		yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
+			bytearray(encodedImage) + b'\r\n')
+
+
+@app.route("/video_feed")
+def video_feed():
+	# return the response generated along with the specific media
+	# type (mime type)
+	return Response(generate(),
+		mimetype = "multipart/x-mixed-replace; boundary=frame")
+
 
 help_string = "[s] Save side by side image [d] Save Depth, [n] Change Depth format, [p] Save Point Cloud, [m] Change Point Cloud format, [q] Quit"
 prefix_point_cloud = "Cloud_"
@@ -110,16 +165,33 @@ def print_help() :
     print(" Press 'm' to switch Point Cloud format")
     print(" Press 'n' to switch Depth format")
 
+def flaskThread():
+    app.run(host=args["ip"], port=args["port"], debug=True, threaded=True, use_reloader=False) 
 
 def main() :
+    # construct the argument parser and parse command line arguments
+    ap = argparse.ArgumentParser()
+    ap.add_argument("-i", "--ip", type=str, required=True,
+        help="ip address of the device")
+    ap.add_argument("-o", "--port", type=int, required=True,
+        help="ephemeral port number of the server (1024 to 65535)")
+    ap.add_argument("-f", "--frame-count", type=int, default=32,
+        help="# of frames used to construct the background model")
+    ap.add_argument("-s", "--source", type=str, default="cam", help="using 'cam'era or 'svo'<SVO file>?")
+    global args
+    args = vars(ap.parse_args())
 
+    # start the flask app
+    print("running flask.")
+    threading.Thread(target=flaskThread).start()
+    print("flask app running.")
     # Create a ZED camera object
     zed = sl.Camera()
 
     # Set configuration parameters
     input_type = sl.InputType()
-    if len(sys.argv) >= 2 :
-        input_type.set_from_svo_file(sys.argv[1])
+    if args["source"] != "cam" :
+        input_type.set_from_svo_file(args["source"])
     init = sl.InitParameters(input_t=input_type)
     init.camera_resolution = sl.RESOLUTION.HD1080
     init.depth_mode = sl.DEPTH_MODE.PERFORMANCE
@@ -169,9 +241,9 @@ def main() :
 
     while key != 113 :
         # Wait for request
-        print('Waiting for request...')
+        # print('Waiting for request...')
         data = connection.recv(16)
-        print('received {!r}'.format(data))
+        # print('received {!r}'.format(data))
 
         err = zed.grab(runtime)
         if err == sl.ERROR_CODE.SUCCESS :
@@ -204,7 +276,7 @@ def main() :
                     n_min = n
                     depth_value_min = depth_value
                 n = n + 1
-            print('Min value is at: ' + str(n_min) + '. Value is: ' + str(depth_value_min) + '.')
+            # print('Min value is at: ' + str(n_min) + '. Value is: ' + str(depth_value_min) + '.')
             # n_min = 100
             # cv2.circle( depth_image_ocv, ( n_min, image_size.height // 2 ), \
             #        32, ( 0, 0, 255 ), 1, 8 )
@@ -225,10 +297,10 @@ def main() :
                     # cv2.circle( depth_image_ocv, ( x, image_size.height // 2), \
                     #    16, ( 0, 0, 255 ), 1, 8 )
                 n = n + 1
-            print(str(len(point_x)) + 'points are within threshold 40.\n')
+            # print(str(len(point_x)) + 'points are within threshold 40.\n')
             # print('Point within threshold:\n' + str(point_depth))
             girder_center = int(np.mean(point_x))
-            print('Girder ceter at: ' + str(girder_center)) 
+            # print('Girder ceter at: ' + str(girder_center)) 
             
             # Sending TCP msg
             connection.sendall(girder_center.to_bytes(2,'big'))
@@ -240,10 +312,13 @@ def main() :
             cv2.circle(depth_image_ocv, (image_size.width //2, image_size.height //2), \
                     8, (0,255,0),2,8)
 
-
+            
             cv2.imshow("Image", image_ocv)
             cv2.imshow("Depth", depth_image_ocv)
-
+            
+            # Send to webserver
+            global outputFrame
+            outputFrame = depth_image_ocv.copy()
             key = cv2.waitKey(10)
 
             process_key_event(zed, key)
