@@ -37,7 +37,7 @@ def generate():
 			# check if the output frame is available, otherwise skip
 			# the iteration of the loop
 			if outputFrame is None:
-				print (outputFrame is None)
+				# print(outputFrame is None)
 				continue
 
 			# encode the frame in JPEG format
@@ -311,10 +311,30 @@ def main() :
             # Draw view center
             cv2.circle(depth_image_ocv, (image_size.width //2, image_size.height //2), \
                     8, (0,255,0),2,8)
+            # Draw Text depth_value_min
+            # font 
+            font = cv2.FONT_HERSHEY_SIMPLEX 
+  
+            # org 
+            org = (int(girder_center), image_size.height //2) 
+              
+            # fontScale 
+            fontScale = 1
+               
+            # Blue color in BGR 
+            color = (255, 0, 0) 
+              
+            # Line thickness of 2 px 
+            thickness = 2
+               
+            # Using cv2.putText() method 
+            image = cv2.putText( depth_image_ocv, str(depth_value_min), org, font,  
+                    fontScale, color, thickness, cv2.LINE_AA) 
+
 
             
-            cv2.imshow("Image", image_ocv)
-            cv2.imshow("Depth", depth_image_ocv)
+            # cv2.imshow("Image", image_ocv)
+            # cv2.imshow("Depth", depth_image_ocv)
             
             # Send to webserver
             global outputFrame
