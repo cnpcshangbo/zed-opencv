@@ -304,12 +304,12 @@ def main() :
             
             # Sending TCP msg
             connection.sendall(girder_center.to_bytes(2,'big'))
-    
+            connection.sendall(int(depth_value_min).to_bytes(2,'big')) 
             # Draw girder center
-            cv2.circle( depth_image_ocv, (int(girder_center), image_size.height // \
+            cv2.circle( image_ocv, (int(girder_center), image_size.height // \
                     2), 8, (255, 0, 0), 2, 8 )
             # Draw view center
-            cv2.circle(depth_image_ocv, (image_size.width //2, image_size.height //2), \
+            cv2.circle( image_ocv, (image_size.width //2, image_size.height //2), \
                     8, (0,255,0),2,8)
             # Draw Text depth_value_min
             # font 
@@ -328,7 +328,7 @@ def main() :
             thickness = 2
                
             # Using cv2.putText() method 
-            image = cv2.putText( depth_image_ocv, str(depth_value_min), org, font,  
+            image = cv2.putText( image_ocv, str(int(depth_value_min)) + ' mm', org, font,  
                     fontScale, color, thickness, cv2.LINE_AA) 
 
 
@@ -338,7 +338,7 @@ def main() :
             
             # Send to webserver
             global outputFrame
-            outputFrame = depth_image_ocv.copy()
+            outputFrame = image_ocv.copy()
             key = cv2.waitKey(10)
 
             process_key_event(zed, key)
